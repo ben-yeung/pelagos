@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pelagos
 
-## Getting Started
+Marketing site for **Pelagos**, a fictional AI startup building machine intelligence for marine biology. It's a single page set over a live, monochrome ASCII ocean.
 
-First, run the development server:
+## Highlights
+
+- **ASCII ocean backdrop.** A full-screen canvas of drifting wave texture. The white sunlit zone gives way to blue at a dithered shoreline as you scroll down, with a depth gauge from the sunlight zone to the hadal zone.
+- **Top-down sea life.** Fish, turtles, sharks, mantas, jellyfish, octopus, whales and shoals, drawn as digit-filled silhouettes that steer, bank and bend as they swim.
+- **Reacts to you.** Scrolling speeds up the current and startles the creatures. Moving the cursor stirs ripples that bend the texture before the water settles back.
+- **Readable by design.** The backdrop clears behind copy and the nav, so text never fights the animation.
+- **Platform section.** A sticky instrument panel with live ASCII readouts: a whale-call spectrogram, a reef-mapping scan and eDNA reads being assigned to species.
+- **Oversized wordmark.** PELAGOS is set in the wave texture at the bottom of the page, bleeding off the screen edges.
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · [Motion](https://motion.dev)
+
+## Run it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Where things live
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Path | What |
+| --- | --- |
+| `components/AsciiOcean.tsx` | Canvas backdrop: wave field, creatures, ripples, wordmark rendering |
+| `lib/creatures.ts` | Creature shapes and swimming behaviour |
+| `lib/readouts.ts` | Live ASCII readouts for the platform section |
+| `lib/wordmark.ts` | Rasterises the PELAGOS wordmark onto the backdrop grid |
+| `components/Platform.tsx`, `Nav.tsx`, `Hero.tsx` | Page sections |
+| `app/page.tsx` | Page content and layout |
 
-## Learn More
+Visitors who turn on reduced motion get a calmer backdrop with no cursor ripples.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+> All company details, figures and quotes are placeholder content.
