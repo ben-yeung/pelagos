@@ -25,6 +25,8 @@ import { buildWordmark, type Wordmark } from "@/lib/wordmark";
 
 const BLUE = "#0b33ff";
 const WHITE = "#ffffff";
+/** Waves below the shoreline: a deep navy that reads as shadow in the blue */
+const DEEP_INK = "#061c96";
 
 const RAMP = ".,:;~=+*#";
 const DITHER = ":.";
@@ -770,7 +772,7 @@ export default function AsciiOcean() {
       }
       const styles: [string, number][] = [
         [BLUE, 0.16 + 0.45 * E],
-        [WHITE, 0.18 + 0.5 * E],
+        [DEEP_INK, 0.4 + 0.55 * E],
         [BLUE, 0.78],
         [WHITE, 0.82],
         [BLUE, 0.4],
