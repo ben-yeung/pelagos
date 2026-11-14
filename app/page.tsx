@@ -101,7 +101,7 @@ export default function Home() {
                       <ul className="mt-6 space-y-3 text-base leading-relaxed sm:text-[17px]">
                         {s.points.map((point) => (
                           <li key={point} className="flex items-baseline gap-3">
-                            <span aria-hidden className="font-mono text-xs">-&gt;</span>
+                            <span aria-hidden className="inline-block size-1.5 shrink-0 -translate-y-[0.3em] bg-current" />
                             <span>{point}</span>
                           </li>
                         ))}
