@@ -156,7 +156,7 @@ export default function Home() {
 
           <footer
             id="seabed"
-            className="flex flex-col justify-start px-6 pb-[calc(13vw+3.25rem)] pt-10 font-mono text-[13px] font-semibold uppercase tracking-widest sm:px-10 lg:px-16"
+            className="flex flex-col justify-start px-6 pb-[calc(16vw+4.25rem)] pt-10 font-mono text-[13px] font-semibold uppercase tracking-widest sm:px-10 lg:px-16"
           >
             <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white pt-6">
               <span>&gt;&lt;&gt; Pelagos Labs</span>
