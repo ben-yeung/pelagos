@@ -51,14 +51,17 @@ const PRODUCTS: Product[] = [
     code: "STRAND",
     uri: "pelagos://strand/sample-0412",
     kicker: "eDNA metabarcoding",
-    title: "An eDNA census from a litre of seawater.",
-    body: "A DNA language model that names every species in a sample, and flags the unknown.",
+    title: "What passed by, read from a litre of seawater.",
+    body: "The same moorings filter water daily. Shed DNA is sequenced on board and matched against a reference library of 41,000 marine species.",
     metrics: [
-      ["98.1%", "genus-level accuracy"],
-      ["3", "markers: 12S, COI, 18S"],
-      ["< 2 h", "sample to report"],
+      ["94.6%", "species recall, 12S + COI"],
+      ["24–48 h", "window a DNA trace covers"],
+      ["6 h", "filter to report, at sea"],
     ],
-    points: ["Calibrated confidence, not just best hit", "OOD detection for candidate novel taxa"],
+    points: [
+      "Detections cross-checked against what Echo heard and Reefsight saw",
+      "Unknown reads flagged as candidate new taxa",
+    ],
     readout: strandReadout,
   },
 ];
@@ -211,7 +214,7 @@ function Chapter({
         <ul className="mt-8 max-w-xl space-y-3 text-base leading-relaxed sm:text-[17px]">
           {product.points.map((point) => (
             <li key={point} className="flex items-baseline gap-3">
-              <span aria-hidden className="font-mono text-xs">-&gt;</span>
+              <span aria-hidden className="inline-block size-1.5 shrink-0 -translate-y-[0.3em] bg-current" />
               <span>{point}</span>
             </li>
           ))}
