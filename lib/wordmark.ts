@@ -2,8 +2,8 @@
  * The PELAGOS wordmark that closes the page, drawn *in* the backdrop's wave
  * texture rather than on top of it: inside the letters the same ASCII current
  * just runs denser and brighter, with soft dithered edges. The word is
- * oversized so it bleeds past both sides of the viewport, and rests whole on
- * the bottom of the page.
+ * oversized so it bleeds past both sides of the viewport and runs off the
+ * bottom of the page, cut just enough to stay readable.
  *
  * This module only rasterises the word into per-cell coverage (0..1) on the
  * backdrop's own grid; AsciiOcean renders the texture.
@@ -18,8 +18,8 @@ export type Wordmark = {
 
 /** How much wider than the viewport the word is set. */
 const OVERSIZE = 1.05;
-/** Gap below the letters, in rows, so the dithered bottom edge isn't clipped. */
-const FOOT = 1;
+/** Share of the letters' height cut off by the bottom of the page. */
+const SINK = 0.1;
 /** Coverage is sampled on a SUB x SUB grid inside each cell. */
 const SUB = 3;
 
@@ -37,7 +37,7 @@ export function buildWordmark(
   const m = probe.measureText(text);
   const size = (100 * viewportW * OVERSIZE) / m.width;
   const cap = (m.actualBoundingBoxAscent / 100) * size;
-  const rows = Math.max(3, Math.ceil(cap / ch) + 1 + FOOT);
+  const rows = Math.max(3, Math.ceil((cap * (1 - SINK)) / ch) + 1);
 
   const width = Math.round(viewportW);
   const height = rows * ch;
@@ -50,8 +50,8 @@ export function buildWordmark(
   g.textAlign = "center";
   g.textBaseline = "alphabetic";
   g.fillStyle = "#fff";
-  // baseline FOOT rows above the bottom, so every letter is drawn whole
-  g.fillText(text, width / 2, height - FOOT * ch);
+  // baseline below the band, so the bottom SINK of the letters is cut off
+  g.fillText(text, width / 2, height + cap * SINK);
 
   const px = g.getImageData(0, 0, width, height).data;
   const cover = new Float32Array(cols * rows);
