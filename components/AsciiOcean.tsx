@@ -550,9 +550,10 @@ export default function AsciiOcean() {
       stepRipples(dt);
 
       // the PELAGOS wordmark: the same current, denser and brighter inside
-      // the letters, with dithered edges; resting on the bottom of the page
+      // the letters, with dithered edges; cut by the bottom of the page. The
+      // band runs into the last (partial) row so the cut lands on the edge.
       wordCell.fill(0);
-      const markTop = wordmark ? Math.floor(floorPx / ch) - wordmark.rows : Infinity;
+      const markTop = wordmark ? Math.ceil(floorPx / ch) - wordmark.rows : Infinity;
       for (let r = 0; r < rows; r++) {
         const off = r * cols;
         const markRow = wordmark && r >= markTop && r < markTop + wordmark.rows ? r - markTop : -1;
