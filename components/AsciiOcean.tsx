@@ -323,17 +323,15 @@ export default function AsciiOcean() {
     };
 
     /**
-     * Mark the cells behind the copy. Body text (paragraphs, quotes, list
-     * items) covers its whole block; headings and links are traced around the
-     * visible text itself, clipped by any mask it sits in, so words that are
-     * still sliding in from behind a mask don't clear the water yet. The
-     * strength follows the copy's opacity, and a half-strength cell on either
-     * side softens the edge.
+     * Mark the cells behind the copy. Every element is traced around its
+     * visible lines of text only (never its whole box, which for a block can
+     * span the page), clipped by any mask it sits in, so words that are still
+     * sliding in from behind a mask don't calm the water yet. The strength
+     * follows the copy's opacity and fades out over two cells either side,
+     * so there is no hard edge to read as a box.
      */
-    const BLOCK = new Set(["P", "BLOCKQUOTE", "LI", "DD"]);
     type Source = {
       el: HTMLElement;
-      block: boolean;
       /** live computed styles of the element and its ancestors, for opacity */
       chain: CSSStyleDeclaration[];
       /** text nodes, each with the nearest clipping ancestor inside el */
@@ -343,9 +341,8 @@ export default function AsciiOcean() {
       const chain: CSSStyleDeclaration[] = [];
       for (let n: HTMLElement | null = el; n && n !== document.body; n = n.parentElement)
         chain.push(getComputedStyle(n));
-      const block = BLOCK.has(el.tagName) || el.dataset.veil === "block";
       const texts: Source["texts"] = [];
-      if (!block) {
+      {
         const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
         for (let t = walk.nextNode() as Text | null; t; t = walk.nextNode() as Text | null) {
           if (!t.data.trim()) continue;
@@ -360,7 +357,7 @@ export default function AsciiOcean() {
           texts.push({ node: t, clip });
         }
       }
-      return { el, block, chain, texts };
+      return { el, chain, texts };
     });
     const range = document.createRange();
     const mark = (left: number, top: number, right: number, bottom: number, v: number) => {
@@ -369,12 +366,13 @@ export default function AsciiOcean() {
       const c1 = Math.min(cols - 1, Math.ceil(right / cw) - 1);
       const r0 = Math.max(0, Math.floor((top + 2) / ch));
       const r1 = Math.min(rows - 1, Math.floor((bottom - 2) / ch));
-      const soft = v >> 1;
       for (let row = r0; row <= r1; row++) {
         const off = row * cols;
-        for (let c = c0; c <= c1; c++) if (veil[off + c] < v) veil[off + c] = v;
-        if (c0 > 0 && veil[off + c0 - 1] < soft) veil[off + c0 - 1] = soft;
-        if (c1 < cols - 1 && veil[off + c1 + 1] < soft) veil[off + c1 + 1] = soft;
+        for (let c = Math.max(0, c0 - 2); c <= Math.min(cols - 1, c1 + 2); c++) {
+          const out = c < c0 ? c0 - c : c > c1 ? c - c1 : 0;
+          const w = out === 0 ? v : out === 1 ? (v * 0.55) | 0 : (v * 0.25) | 0;
+          if (veil[off + c] < w) veil[off + c] = w;
+        }
       }
     };
     const buildVeil = () => {
@@ -386,10 +384,6 @@ export default function AsciiOcean() {
         for (const st of src.chain) opacity *= parseFloat(st.opacity) || 0;
         const v = Math.round(255 * Math.min(1, (opacity - 0.1) / 0.6));
         if (v <= 0) continue;
-        if (src.block) {
-          mark(box.left, box.top, box.right, box.bottom, v);
-          continue;
-        }
         for (const { node, clip } of src.texts) {
           range.selectNodeContents(node);
           const cb = clip?.getBoundingClientRect();
@@ -824,7 +818,7 @@ export default function AsciiOcean() {
             // behind copy the water thins out and falls back, rather than
             // being cut away
             const v = veil[i];
-            if (v && grain[i] < v * 0.7) continue;
+            if (v && grain[i] < v * 0.6) continue;
             const p = (v ? L_GHOST : L_FIELD) * 2 + deep;
             bufs[p][c] = field[i];
             used |= 1 << p;

@@ -76,7 +76,7 @@ export default function Nav() {
     >
       <motion.div
         layout
-        data-veil="block"
+        data-veil
         transition={{ layout: { duration: 0.6, ease: EASE } }}
         className={`pointer-events-auto flex items-center font-mono uppercase transition-colors duration-500 ${
           compact
