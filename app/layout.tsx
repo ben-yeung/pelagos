@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pelagos — Machine intelligence for the living ocean",
+  title: "><> Pelagos",
   description:
     "Pelagos trains foundation models on hydrophone audio, reef imagery and environmental DNA so marine scientists can hear, see and forecast life below the surface.",
 };
