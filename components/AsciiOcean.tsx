@@ -124,7 +124,10 @@ export default function AsciiOcean() {
     let field = new Uint16Array(0);
     let fg = new Uint16Array(0);
     let fgFaint = new Uint8Array(0);
+    /** 0..255 per cell: how strongly the water calms behind copy */
     let veil = new Uint8Array(0);
+    /** fixed per-cell noise, so thinning behind copy is a stable dither */
+    let grain = new Uint8Array(0);
     let boundary = new Int16Array(0);
     let rowSin = new Float32Array(0);
     let colSin = new Float32Array(0);
@@ -159,6 +162,8 @@ export default function AsciiOcean() {
       fgFaint = new Uint8Array(cols * rows);
       wordCell = new Uint8Array(cols * rows);
       veil = new Uint8Array(cols * rows);
+      grain = new Uint8Array(cols * rows);
+      for (let i = 0; i < grain.length; i++) grain[i] = (Math.random() * 256) | 0;
       boundary = new Int16Array(cols);
       rowSin = new Float32Array(rows);
       colSin = new Float32Array(cols);
@@ -319,30 +324,86 @@ export default function AsciiOcean() {
 
     /**
      * Mark the cells behind the copy. Body text (paragraphs, quotes, list
-     * items) clears its whole block, so a paragraph reads on calm water like
-     * the hero does; headings and links are traced line by line around the
-     * text itself. Both keep a one-cell margin.
+     * items) covers its whole block; headings and links are traced around the
+     * visible text itself, clipped by any mask it sits in, so words that are
+     * still sliding in from behind a mask don't clear the water yet. The
+     * strength follows the copy's opacity, and a half-strength cell on either
+     * side softens the edge.
      */
-    const range = document.createRange();
     const BLOCK = new Set(["P", "BLOCKQUOTE", "LI", "DD"]);
+    type Source = {
+      el: HTMLElement;
+      block: boolean;
+      /** live computed styles of the element and its ancestors, for opacity */
+      chain: CSSStyleDeclaration[];
+      /** text nodes, each with the nearest clipping ancestor inside el */
+      texts: { node: Text; clip: HTMLElement | null }[];
+    };
+    const sources: Source[] = readable.map((el) => {
+      const chain: CSSStyleDeclaration[] = [];
+      for (let n: HTMLElement | null = el; n && n !== document.body; n = n.parentElement)
+        chain.push(getComputedStyle(n));
+      const block = BLOCK.has(el.tagName) || el.dataset.veil === "block";
+      const texts: Source["texts"] = [];
+      if (!block) {
+        const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let t = walk.nextNode() as Text | null; t; t = walk.nextNode() as Text | null) {
+          if (!t.data.trim()) continue;
+          let clip: HTMLElement | null = null;
+          for (let n = t.parentElement; n && n !== el.parentElement; n = n.parentElement) {
+            const o = getComputedStyle(n).overflow;
+            if (o.includes("hidden") || o.includes("clip")) {
+              clip = n;
+              break;
+            }
+          }
+          texts.push({ node: t, clip });
+        }
+      }
+      return { el, block, chain, texts };
+    });
+    const range = document.createRange();
+    const mark = (left: number, top: number, right: number, bottom: number, v: number) => {
+      if (right - left < 1 || bottom < 0 || top > H) return;
+      const c0 = Math.max(0, Math.floor(left / cw));
+      const c1 = Math.min(cols - 1, Math.ceil(right / cw) - 1);
+      const r0 = Math.max(0, Math.floor((top + 2) / ch));
+      const r1 = Math.min(rows - 1, Math.floor((bottom - 2) / ch));
+      const soft = v >> 1;
+      for (let row = r0; row <= r1; row++) {
+        const off = row * cols;
+        for (let c = c0; c <= c1; c++) if (veil[off + c] < v) veil[off + c] = v;
+        if (c0 > 0 && veil[off + c0 - 1] < soft) veil[off + c0 - 1] = soft;
+        if (c1 < cols - 1 && veil[off + c1 + 1] < soft) veil[off + c1 + 1] = soft;
+      }
+    };
     const buildVeil = () => {
       veil.fill(0);
-      for (const el of readable) {
-        const box = el.getBoundingClientRect();
+      for (const src of sources) {
+        const box = src.el.getBoundingClientRect();
         if (box.bottom < 0 || box.top > H || box.width === 0) continue;
-        let rects: Iterable<DOMRect>;
-        if (BLOCK.has(el.tagName) || el.dataset.veil === "block") rects = [box];
-        else {
-          range.selectNodeContents(el);
-          rects = range.getClientRects();
+        let opacity = 1;
+        for (const st of src.chain) opacity *= parseFloat(st.opacity) || 0;
+        const v = Math.round(255 * Math.min(1, (opacity - 0.1) / 0.6));
+        if (v <= 0) continue;
+        if (src.block) {
+          mark(box.left, box.top, box.right, box.bottom, v);
+          continue;
         }
-        for (const r of rects) {
-          if (r.width < 1 || r.bottom < 0 || r.top > H) continue;
-          const c0 = Math.max(0, Math.floor(r.left / cw) - 1);
-          const c1 = Math.min(cols - 1, Math.ceil(r.right / cw));
-          const r0 = Math.max(0, Math.floor((r.top + 2) / ch));
-          const r1 = Math.min(rows - 1, Math.floor((r.bottom - 2) / ch));
-          for (let row = r0; row <= r1; row++) veil.fill(1, row * cols + c0, row * cols + c1 + 1);
+        for (const { node, clip } of src.texts) {
+          range.selectNodeContents(node);
+          const cb = clip?.getBoundingClientRect();
+          for (const r of range.getClientRects()) {
+            if (!cb) mark(r.left, r.top, r.right, r.bottom, v);
+            else
+              mark(
+                Math.max(r.left, cb.left),
+                Math.max(r.top, cb.top),
+                Math.min(r.right, cb.right),
+                Math.min(r.bottom, cb.bottom),
+                v,
+              );
+          }
         }
       }
     };
@@ -751,14 +812,20 @@ export default function AsciiOcean() {
           const top = fg[i];
           if (top) {
             if (top === SPACE) continue;
-            // behind copy, everything drops to a ghost (the readout excepted)
+            // behind copy, creatures fade back (the readout excepted)
             const inBand = r >= markTop;
-            const layer = (veil[i] && r !== readoutRow) || inBand ? L_GHOST : fgFaint[i] ? L_FAINT : L_SOLID;
+            const v = r === readoutRow ? 0 : veil[i];
+            const layer =
+              v > 150 || inBand ? L_GHOST : v > 0 || fgFaint[i] ? L_FAINT : L_SOLID;
             const p = layer * 2 + deep;
             bufs[p][c] = top;
             used |= 1 << p;
-          } else if (field[i] !== SPACE && !veil[i]) {
-            const p = L_FIELD * 2 + deep;
+          } else if (field[i] !== SPACE) {
+            // behind copy the water thins out and falls back, rather than
+            // being cut away
+            const v = veil[i];
+            if (v && grain[i] < v * 0.7) continue;
+            const p = (v ? L_GHOST : L_FIELD) * 2 + deep;
             bufs[p][c] = field[i];
             used |= 1 << p;
           }
