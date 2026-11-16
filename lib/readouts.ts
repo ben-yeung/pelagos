@@ -2,7 +2,8 @@
  * Live ASCII readouts for the platform section. Each factory returns a
  * stateful `frame(seconds) => string` that renders one screen of a fixed-size
  * monospace "instrument". They are plain functions so the component can write
- * the result straight into a <pre> without re-rendering React.
+ * the result straight into a <pre> without re-rendering React. STRAND returns
+ * markup (escaped, with a few styled spans); the others return plain text.
  */
 
 export const READOUT_COLS = 58;
@@ -10,6 +11,7 @@ export const READOUT_ROWS = 17;
 
 const pick = <T,>(xs: readonly T[]) => xs[Math.floor(Math.random() * xs.length)];
 const pad = (s: string, n: number) => (s.length >= n ? s.slice(0, n) : s + " ".repeat(n - s.length));
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** Write `text` into `line` starting at `at`, clipped to the line. */
 const overlay = (line: string[], at: number, text: string) => {
@@ -242,10 +244,10 @@ export function strandReadout() {
   const newRead = (born: number): Read => {
     const id = total++;
     let seq = "";
-    for (let i = 0; i < seqLen; i++) seq += "acgt"[Math.floor(Math.random() * 4)];
+    for (let i = 0; i < seqLen; i++) seq += "ACGT"[Math.floor(Math.random() * 4)];
     const roll = Math.random();
     let hit = -1;
-    let result = "  unassigned";
+    let result = "? unassigned";
     if (roll < 0.72) {
       hit = Math.floor(Math.random() * (seqLen - 10));
       const taxon = pick(TAXA);
@@ -268,16 +270,28 @@ export function strandReadout() {
     while (reads.length > rows - 1) reads.shift();
 
     const out: string[] = [pad(" READ    SEQUENCE                  ASSIGNMENT", READOUT_COLS)];
+    // unassigned reads are re-queried: a bright window sweeps along them and
+    // their label pulses, while the rest of the read sits dimmed
+    const sweep = (seconds * 14) % (seqLen + 10);
+    const pulse = (0.75 + 0.25 * Math.sin(seconds * 4)).toFixed(2);
     for (const r of reads) {
       const typed = Math.min(seqLen, Math.floor((seconds - r.born) * typeSpeed));
+      const done = typed === seqLen;
+      const unassigned = done && r.hit < 0;
       let seq = "";
       for (let i = 0; i < seqLen; i++) {
         if (i >= typed) seq += i === typed ? "_" : " ";
-        else if (r.hit >= 0 && typed === seqLen && i >= r.hit && i < r.hit + 10) seq += r.seq[i].toUpperCase();
-        else seq += r.seq[i];
+        else if (done && r.hit >= 0 && i === r.hit) seq += `<u>${r.seq.slice(i, i + 10)}</u>`;
+        else if (done && r.hit >= 0 && i > r.hit && i < r.hit + 10) continue;
+        else if (unassigned) {
+          const lit = Math.max(0, 1 - Math.abs(i - sweep) / 2.5);
+          seq += `<span style="opacity:${(0.55 + 0.45 * lit).toFixed(2)}">${r.seq[i]}</span>`;
+        } else seq += r.seq[i];
       }
-      const result = typed === seqLen ? r.result : "  ...";
-      out.push(pad(` R${String(r.id).slice(-5)}  ${seq}  ${result}`, READOUT_COLS));
+      const label = done ? r.result : "  ...";
+      const tail = esc(pad(`  ${label}`, READOUT_COLS - 9 - seqLen));
+      const result = unassigned ? `<span style="opacity:${pulse}">${tail}</span>` : tail;
+      out.push(` R${String(r.id).slice(-5)}  ${seq}${result}`);
     }
     while (out.length < rows) out.push("");
     out.push("-".repeat(READOUT_COLS));
@@ -285,7 +299,7 @@ export function strandReadout() {
       pad(` READS ${total.toLocaleString("en-US")}   TAXA ${String(29 + seen.size)}   NOVEL ${novel}`, 44) +
         "12S/COI".padStart(READOUT_COLS - 44),
     );
-    out.push(pad(" UPPERCASE = barcode region matched to reference", READOUT_COLS));
+    out.push(pad(" <u>ACGT</u> barcode matched to reference   ? re-querying", READOUT_COLS + 7));
     return out.join("\n");
   };
 }
