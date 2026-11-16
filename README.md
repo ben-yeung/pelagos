@@ -37,4 +37,4 @@ Then open http://localhost:3000.
 
 Visitors who turn on reduced motion get a calmer backdrop with no cursor ripples.
 
-> All company details, figures and quotes are placeholder content.
+> **Mock data only.** Pelagos is not a real company, and nothing on this site is real data. Company details, metrics, quotes and the live readouts (spectrogram, reef scan, eDNA reads and their species assignments) are generated or invented for illustration. They are not scientifically accurate and should not be cited.

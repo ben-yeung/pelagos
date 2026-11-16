@@ -16,6 +16,8 @@ type Product = {
   metrics: [string, string][];
   points: string[];
   readout: () => (seconds: number) => string;
+  /** the readout returns escaped markup rather than plain text */
+  html?: boolean;
 };
 
 const PRODUCTS: Product[] = [
@@ -63,11 +65,12 @@ const PRODUCTS: Product[] = [
       "Unknown reads flagged as candidate new taxa",
     ],
     readout: strandReadout,
+    html: true,
   },
 ];
 
 /** A <pre> driven by a readout factory, written directly without re-rendering. */
-function Readout({ make }: { make: Product["readout"] }) {
+function Readout({ make, html }: { make: Product["readout"]; html?: boolean }) {
   const ref = useRef<HTMLPreElement>(null);
   const visible = useInView(ref, { margin: "120px" });
   const [frame] = useState(make);
@@ -76,8 +79,12 @@ function Readout({ make }: { make: Product["readout"] }) {
     const node = ref.current;
     if (!node) return;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const write = (s: string) => {
+      if (html) node.innerHTML = s;
+      else node.textContent = s;
+    };
     if (still || !visible) {
-      if (!node.textContent) node.textContent = frame(4);
+      if (!node.textContent) write(frame(4));
       return;
     }
     let raf = 0;
@@ -87,17 +94,17 @@ function Readout({ make }: { make: Product["readout"] }) {
       raf = requestAnimationFrame(loop);
       if (now - last < 1000 / 24) return;
       last = now;
-      node.textContent = frame((now - start) / 1000);
+      write(frame((now - start) / 1000));
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [frame, visible]);
+  }, [frame, html, visible]);
 
   return (
     <pre
       ref={ref}
       aria-hidden
-      className="overflow-hidden font-mono text-[9px] leading-[1.45] sm:text-[11px] xl:text-[12.5px]"
+      className="overflow-hidden font-mono text-[9px] leading-[1.45] sm:text-[11px] xl:text-[12.5px] [&_u]:decoration-[1.5px] [&_u]:underline-offset-[3px]"
     />
   );
 }
@@ -150,7 +157,7 @@ function Panel({ active, onSelect }: { active: number; onSelect?: (i: number) =>
             exit={{ opacity: 0, filter: "blur(6px)", y: -8 }}
             transition={{ duration: 0.45, ease: EASE }}
           >
-            <Readout make={p.readout} />
+            <Readout make={p.readout} html={p.html} />
           </motion.div>
         </AnimatePresence>
       </div>
